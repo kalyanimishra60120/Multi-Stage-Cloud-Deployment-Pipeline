@@ -1,0 +1,65 @@
+image: ubuntu:22.04
+
+stages:
+  - build
+  - test
+  - deploy_staging
+  - deploy_production
+
+variables:
+  GIT_STRATEGY: fetch
+
+before_script:
+  - apt-get update -y
+  - apt-get install -y python3 python3-pip python3-venv git ssh
+
+build:
+  stage: build
+  script:
+    - echo "BUILD OK"
+  only:
+    - main
+
+test:
+  stage: test
+  script:
+    - echo "TEST STAGE RUNNING..."
+    - python3 -m venv venv
+    - source venv/bin/activate
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - export PYTHONPATH="$CI_PROJECT_DIR"
+    - pytest -q
+  only:
+    - main
+
+deploy_staging:
+  stage: deploy_staging
+  script:
+    - echo "$EC2_SSH_KEY" > key.pem
+    - chmod 600 key.pem
+    - chmod +x deploy_staging.sh
+    - chmod +x deploy_prod.sh
+    - ./deploy_staging.sh "$EC2_HOST" key.pem "$GIT_REPO"
+  when: manual
+  only:
+    - main
+
+  deploy_production:
+  stage: deploy_production
+  script:
+    - echo "$EC2_SSH_KEY" > key.pem
+    - chmod 600 key.pem
+    - chmod +x deploy_staging.sh
+    - chmod +x deploy_prod.sh
+    - ./deploy_prod.sh "$EC2_HOST" key.pem
+  when: manual
+  only:
+    - main
+
+
+
+
+
+
+
